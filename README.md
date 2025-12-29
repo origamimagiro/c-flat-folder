@@ -6,11 +6,11 @@ S. Ku](http://jasonku.mit.edu/). It is in progress...
 
 To run, you will need a C compiler like `clang`. This code requires no external
 dependancies aside from the C standard library and POSIX `<dirent.h>` for
-directory traversal. For Mac or Linux, the `build` BASH script provides an
+directory traversal. For Mac or Linux, the `build` bash script provides an
 example of usage (run `./build` from a terminal). On Windows, I've only tested
 this with VS 2022 Build Tools, with the `clang` compiler option installed and
 [this implementation of `dirent.h`](https://github.com/tronkko/dirent), built
-using the `build.bat` file. I currently compile everything on every run as
+using the `build.bat` batch file. I currently compile everything on every run as
 compilation currently takes less than half a second on my machine.
 
 **Input:** Put any `.CP` or `.FOLD` files that you want processed in the
