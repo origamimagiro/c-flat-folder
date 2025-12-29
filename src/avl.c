@@ -28,7 +28,7 @@ unsigned idx(struct AVL *T, struct Node *X) {
 }
 
 static
-char ht(struct AVL *T, int r, struct Node *X) {
+int ht(struct AVL *T, int r, struct Node *X) {
     return (X->c[r] == 0) ? 0 : node(T, X->c[r])->h;
 }
 
@@ -39,7 +39,7 @@ int skew(struct AVL *T, struct Node *X) {
 
 static
 void update(struct AVL *T, struct Node *X) {
-    char hL = ht(T, 0, X), hR = ht(T, 1, X);
+    int hL = ht(T, 0, X), hR = ht(T, 1, X);
     X->h = 1 + ((hL < hR) ? hR : hL);
 }
 
@@ -196,7 +196,7 @@ void print_node(struct Node *X) {
 void AVL_print_struct(struct AVL *T) {
     printf("AVL tree: %p\n", T);
     printf("  comp: %p, ctx: %p, n: %i\n", T->comp, T->ctx, T->A.n);
-    for (unsigned i = 0; i < T->A.n; ++i) {
+    for (int i = 0; i < T->A.n; ++i) {
         printf("%i: ", i); print_node(node(T, i)); printf("\n");
     }
 }
@@ -221,12 +221,12 @@ int str_gen(struct AVL *T, unsigned i, int *x, int y, int l, int w, char *S) {
     char *row = S + y*w;
     int x0 = X->l ? str_gen(T, X->l, x, y + 1, 1, w, S) : *x;
     int x1 = *x;
-    for (int i = x0; i < x1; ++i) { row[i] = '_'; }
+    for (int j = x0; j < x1; ++j) { row[j] = '_'; }
     char c = *(row + (*x) + node_sprint(X, NULL));
     int x2 = (*x += node_sprint(X, row + (*x)));
     row[x2] = c;
     int x3 = X->r ? str_gen(T, X->r, x, y + 1, 0, w, S) : *x;
-    for (int i = x2; i < x3; ++i) { row[i] = '_'; }
+    for (int j = x2; j < x3; ++j) { row[j] = '_'; }
     return l ? x1 : x2;
 }
 
