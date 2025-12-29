@@ -2,8 +2,8 @@
 clang -std=c99 \
 -Wall -O3 \
 src/*.c \
--o FF \
+-o CFF \
 && \
-./FF examples/ \
--v out/data.csv \
+./CFF examples/ \
 -svg out/ \
+-v out/data.csv \
