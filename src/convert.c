@@ -584,8 +584,8 @@ int by_area(int i, int j, void *ctx) {
 }
 
 static
-unsigned long encode(unsigned i, unsigned j) {
-    return ((unsigned long) i << 32) | j;
+unsigned long long encode(unsigned i, unsigned j) {
+    return ((unsigned long long) i << (sizeof(int)*8)) | j;
 }
 
 void X_V_EV_2_VV_FV(
@@ -625,7 +625,7 @@ void X_V_EV_2_VV_FV(
     }
     {
         struct DA F = {sizeof(struct DA)};
-        struct HM seen = {sizeof(long), 0};
+        struct HM seen = {sizeof(long long), 0};
 
         for (unsigned vi = 0; vi < Vn; ++vi) {
 
@@ -633,7 +633,7 @@ void X_V_EV_2_VV_FV(
             for (int j = 0; j < (*VVn)[vi]; ++j) {
 
                 unsigned vj = Ai[j];
-                unsigned long key = encode(vi, vj);
+                unsigned long long key = encode(vi, vj);
 
                 if (HM_get(&seen, &key, 0)) { continue; }
 
@@ -726,7 +726,7 @@ void X_V_EV_EA_FV_2_Vf_Ff(
     struct Edata *E = malloc(2*En*sizeof(struct Edata));
 
     // map from directed vertex pair to edge
-    struct HM E_map = {sizeof(long), sizeof(int)};
+    struct HM E_map = {sizeof(long long), sizeof(int)};
     for (int ei = 0; ei < En; ++ei) {
         for (int i = 0; i < 2; ++i) {
             unsigned en = 2*ei + i;
@@ -739,7 +739,7 @@ void X_V_EV_EA_FV_2_Vf_Ff(
             struct Point pu = P[e->u];
             struct Point pv = P[e->v];
             e->d = P_dist(pu, pv);
-            unsigned long k = encode(e->u, e->v);
+            unsigned long long k = encode(e->u, e->v);
             HM_set(&E_map, &k, &en);
         }
     }
@@ -750,7 +750,7 @@ void X_V_EV_EA_FV_2_Vf_Ff(
         int u = F[fn - 1];
         for (int i = 0; i < fn; ++i) {
             int v = F[i];
-            unsigned long k = encode(v, u);
+            unsigned long long k = encode(v, u);
             unsigned i = 0;
             HM_get(&E_map, &k, &i);
             E[i].f = fi;
@@ -773,7 +773,7 @@ void X_V_EV_EA_FV_2_Vf_Ff(
         int v1 = FV[0][1];
         Pf[v0] = P[v0];
         Pf[v1] = P[v1];
-        unsigned long k = encode(v1, v0);
+        unsigned long long k = encode(v1, v0);
         unsigned i = 0;
         HM_get(&E_map, &k, &i);
         PQ_insert(&Q, i);
@@ -803,7 +803,7 @@ void X_V_EV_EA_FV_2_Vf_Ff(
                 struct Point dy = P_mul(yf, P_dot(p, y)*(e->p ? -1 : 1));
                 Pf[v] = P_add(P_add(dx, dy), Pf[e->u]);
             }
-            unsigned long k = encode(u, v);
+            unsigned long long k = encode(u, v);
             unsigned ej = 0;
             HM_get(&E_map, &k, &ej);
             struct Edata *e_ = &(E[ej]);

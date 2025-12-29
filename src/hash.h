@@ -1,7 +1,7 @@
 struct HM {        // 48 bytes
     unsigned k, v;  // number of bytes in key and value resepctively
-    int (*eq)(unsigned, const void*, const void*);    // key equality
-    unsigned long (*hash)(unsigned, const void*);     // key to hash
+    int (*eq)(unsigned, const void*, const void*);      // key equality
+    unsigned long long (*hash)(unsigned, const void*);  // key to hash
     unsigned s;     // k + v + sizeof(unsigned)
     unsigned n;     // # stored items
     unsigned m;     // size of table
@@ -17,8 +17,8 @@ int HM_next(struct HM *M, void *kp, void *vp);
 
 void HM_empty(struct HM *M);
 
-unsigned long HM_HASH_INT(unsigned k, const void *kp);
-unsigned long HM_HASH_STR(unsigned k, const void *kp);
+unsigned long long HM_HASH_INT(unsigned k, const void *kp);
+unsigned long long HM_HASH_STR(unsigned k, const void *kp);
 
 int HM_EQ_INT(unsigned k, const void *a, const void *b);
 int HM_EQ_STR(unsigned k, const void *a, const void *b);

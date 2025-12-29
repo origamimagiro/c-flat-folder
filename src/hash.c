@@ -5,8 +5,8 @@
 
 struct HM {        // 48 bytes
     unsigned k, v;  // number of bytes in key and value resepctively
-    int (*eq)(unsigned, const void*, const void*);    // key equality
-    unsigned long (*hash)(unsigned, const void*);     // key to hash
+    int (*eq)(unsigned, const void*, const void*);      // key equality
+    unsigned long long (*hash)(unsigned, const void*);  // key to hash
     unsigned s;     // k + v + sizeof(unsigned)
     unsigned n;     // # stored items
     unsigned m;     // size of table
@@ -14,15 +14,15 @@ struct HM {        // 48 bytes
     char *A;        // data (2*m*s bytes allocated)
 };
 
-unsigned long HM_HASH_INT(unsigned kn, const void *k) {
-    unsigned long h = 0; memcpy(&h, k, (kn <= 8) ? kn : 8);
-    return ((11400714785074694791UL)*(h + ((kn <= 8) ? 0 :
+unsigned long long HM_HASH_INT(unsigned kn, const void *k) {
+    unsigned long long h = 0; memcpy(&h, k, (kn <= 8) ? kn : 8);
+    return ((11400714785074694791ULL)*(h + ((kn <= 8) ? 0 :
         HM_HASH_INT(kn - 8, ((char *) k) + 8)))) % ((unsigned long) -59);
 }
 int HM_EQ_INT(unsigned kn, const void *a, const void *b) {
     return !memcmp(a, b, kn);
 }
-unsigned long HM_HASH_STR(unsigned kn, const void *k) {
+unsigned long long HM_HASH_STR(unsigned kn, const void *k) {
     return HM_HASH_INT(strlen(*((char **) k)), *((char **) k));
 }
 int HM_EQ_STR(unsigned kn, const void *a, const void *b) {
@@ -133,7 +133,7 @@ void HM_print(struct HM *M, int verbose) {
         if (M->eq == HM_EQ_STR) {
             printf("%s", *((char **) Mk));
         } else if ((M->eq == HM_EQ_INT) && (M->k == 8)) {
-            printf("%lu", *((unsigned long *) Mk));
+            printf("%llu", *((unsigned long long *) Mk));
         } else {
             for (int j = M->k - 1; j >= 0; --j) {
                 printf("%.2X", Mk[j] & 0xFF);
@@ -142,7 +142,7 @@ void HM_print(struct HM *M, int verbose) {
         printf(", v: ");
         char *Mv = c + SU + M->k;
         if (M->v == 8) {
-            printf("%lu", *((unsigned long *) Mv));
+            printf("%llu", *((unsigned long long *) Mv));
         } else {
             for (int j = M->v - 1; j >= 0; --j) {
                 printf("%.2X", Mv[j] & 0xFF);
@@ -153,70 +153,70 @@ void HM_print(struct HM *M, int verbose) {
 }
 
 static
-unsigned long rand_ul() {
-    return (((long unsigned) rand()) << 32) + rand();
+unsigned long long rand_ul() {
+    return (((long long unsigned) rand()) << sizeof(int)) + rand();
 }
 
 int HM_test() {
     int n = 10;
     srand(0);
-    unsigned long *K = malloc(n*sizeof(unsigned long));
-    unsigned long *V = malloc(n*sizeof(unsigned long));
+    unsigned long long *K = malloc(n*sizeof(long long));
+    unsigned long long *V = malloc(n*sizeof(long long));
     for (int i = 0; i < n; ++i) {
         K[i] = rand_ul();
         V[i] = rand_ul();
     }
     {
-        struct HM M = {sizeof(long), sizeof(long)};
+        struct HM M = {sizeof(long long), sizeof(long long)};
         HM_print(&M, 1);
         for (int i = 0; i < n; ++i) {
-            printf("Inserting: %lu, %lu\n", K[i], V[i]);
+            printf("Inserting: %llu, %llu\n", K[i], V[i]);
             assert(!HM_set(&M, K + i, V + i));
             HM_print(&M, 1);
         }
         for (int i = 0; i < n; ++i) {
-            unsigned long v;
-            printf("Getting: %lu\n", K[i]);
+            unsigned long long v;
+            printf("Getting: %llu\n", K[i]);
             assert(HM_get(&M, K + i, &v));
-            printf("Found: %lu\n", v);
+            printf("Found: %llu\n", v);
             assert(v == V[i]);
         }
-        unsigned long *k = 0, *v = 0, i = 0;
+        unsigned long long *k = 0, *v = 0, i = 0;
         while (HM_next(&M, &k, &v)) {
-            printf("%lu: [%lu, %li]\n", i++, *k, *v);
+            printf("%llu: [%llu, %llu]\n", i++, *k, *v);
         }
         for (int i = 0; i < n; ++i) {
-            unsigned long v;
-            printf("Deleting: %lu\n", K[i]);
+            unsigned long long v;
+            printf("Deleting: %llu\n", K[i]);
             assert(HM_del(&M, K + i, &v));
             assert(v == V[i]);
         }
         HM_print(&M, 1);
         HM_empty(&M);
-        struct HM S = {sizeof(long), sizeof(long), HM_EQ_STR, HM_HASH_STR};
+        struct HM S = {sizeof(char*), sizeof(long long), HM_EQ_STR, HM_HASH_STR};
         char (*C)[16] = calloc(1, n*16);
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < 15; ++j) {
                 C[i][j] = 'a' + (rand() % 26);
             }
             char *k = C[i];
-            printf("\n**** setting (%s, %lu) ****\n", k, V[i]);
+            printf("\n**** setting (%s, %llu) ****\n", k, V[i]);
             assert(!HM_set(&S, &k, V + i));
             HM_print(&S, 1);
         }
         HM_print(&S, 1);
         for (int i = 0; i < n; ++i) {
-            unsigned long v;
+            unsigned long long v;
             char *k = C[i];
             assert(HM_get(&S, &k, &v));
             assert(v == V[i]);
         }
         for (int i = 0; i < n; ++i) {
-            unsigned long v;
+            unsigned long long v;
             char *k = C[i];
             assert(HM_del(&S, &k, &v));
             assert(v == V[i]);
-            printf("\n**** deleting (%s, %lu) ****\n", k, v);
+            printf("\n**** deleting (%s, %llu) ****\n", k, v);
         }
         HM_print(&S, 1);
         HM_empty(&S);
@@ -239,7 +239,7 @@ int HM_test() {
         }
         for (int i = 0; i < n; ++i) {
             unsigned k = (unsigned) K[i], v = (unsigned) V[i];
-            unsigned long v_ = 0;
+            unsigned v_ = 0;
             printf("Deleting: %X\n", k);
             assert(HM_del(&M, &k, &v_));
             assert(v == v_);
@@ -248,19 +248,19 @@ int HM_test() {
         HM_empty(&M);
     }
     {
-        struct HM M = {sizeof(long)};
+        struct HM M = {sizeof(long long)};
         HM_print(&M, 1);
         for (int i = 0; i < n; ++i) {
-            printf("Adding: %lX\n", K[i]);
+            printf("Adding: %llu\n", K[i]);
             assert(!HM_set(&M, K + i, 0));
             HM_print(&M, 1);
         }
         for (int i = 0; i < n; ++i) {
-            printf("Has: %lX\n", K[i]);
+            printf("Has: %llu\n", K[i]);
             assert(HM_get(&M, K + i, 0));
         }
         for (int i = 0; i < n; ++i) {
-            printf("Remove: %lX\n", K[i]);
+            printf("Remove: %llu\n", K[i]);
             assert(HM_del(&M, K + i, 0));
         }
         HM_print(&M, 1);
