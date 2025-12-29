@@ -164,9 +164,9 @@ void get_ext(char *path, char *ext) {
 
 void add_data(FILE *file, struct FoldData *data) {
     if (file == NULL) { return; }
-    fprintf(file, "%s,%i,%i,%i,%.17lf,%i,%i,%i,%.17lf,%lf",
+    fprintf(file, "%s,%i,%i,%i,%.17lf,%i,%i,%i,%.17lf",
         data->title, data->Vn, data->En, data->Fn, data->eps,
-        data->Pn, data->Sn, data->Cn, data->feps, data->time
+        data->Pn, data->Sn, data->Cn, data->feps
     );
     fprintf(file, "\n");
     printf("    - Found cp epsilon: %.17g\n", data->eps);
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
 
     struct FoldData data = {};
     if (v_out != NULL) {
-        fprintf(v_out, "title,vertices,edges,faces,eps,points,segments,cells,feps,time\n");
+        fprintf(v_out, "title,vertices,edges,faces,eps,points,segments,cells,feps\n");
     }
 
     clock_t t1 = clock();
