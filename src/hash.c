@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
+#include "assert.h"
 
 struct HM {        // 48 bytes
     unsigned k, v;  // number of bytes in key and value resepctively
@@ -29,12 +29,13 @@ int HM_EQ_STR(unsigned kn, const void *a, const void *b) {
     return !strcmp(*((char **) a), *((char **) b));
 }
 
-const unsigned SU = sizeof(unsigned);
+const unsigned SU = sizeof(int);
 int HM_set(struct HM *M, void *k, void *v);
 static
 void rebuild(struct HM *M, unsigned m) {
     if (M->m == 0) {
-        assert((M->k > 0) && !(M->k % SU) && !(M->v % SU));
+        assert((M->k > 0) && !(M->k % SU) && !(M->v % SU),
+            "M->k and M->v must be a multiple of sizeof(int)");
         M->s = SU + M->k + M->v;
         if (M->eq == 0) {
             M->eq   = HM_EQ_INT;
@@ -171,15 +172,15 @@ int HM_test() {
         HM_print(&M, 1);
         for (int i = 0; i < n; ++i) {
             printf("Inserting: %llu, %llu\n", K[i], V[i]);
-            assert(!HM_set(&M, K + i, V + i));
+            assert(!HM_set(&M, K + i, V + i), "key already exists");
             HM_print(&M, 1);
         }
         for (int i = 0; i < n; ++i) {
             unsigned long long v;
             printf("Getting: %llu\n", K[i]);
-            assert(HM_get(&M, K + i, &v));
+            assert(HM_get(&M, K + i, &v), "key not found");
             printf("Found: %llu\n", v);
-            assert(v == V[i]);
+            assert(v == V[i], "value does not match");
         }
         unsigned long long *k = 0, *v = 0, i = 0;
         while (HM_next(&M, &k, &v)) {
@@ -188,8 +189,8 @@ int HM_test() {
         for (int i = 0; i < n; ++i) {
             unsigned long long v;
             printf("Deleting: %llu\n", K[i]);
-            assert(HM_del(&M, K + i, &v));
-            assert(v == V[i]);
+            assert(HM_del(&M, K + i, &v), "key not found");
+            assert(v == V[i], "value does not match");
         }
         HM_print(&M, 1);
         HM_empty(&M);
@@ -201,21 +202,21 @@ int HM_test() {
             }
             char *k = C[i];
             printf("\n**** setting (%s, %llu) ****\n", k, V[i]);
-            assert(!HM_set(&S, &k, V + i));
+            assert(!HM_set(&S, &k, V + i), "key already exists");
             HM_print(&S, 1);
         }
         HM_print(&S, 1);
         for (int i = 0; i < n; ++i) {
             unsigned long long v;
             char *k = C[i];
-            assert(HM_get(&S, &k, &v));
-            assert(v == V[i]);
+            assert(HM_get(&S, &k, &v), "key not found");
+            assert(v == V[i], "value does not match");
         }
         for (int i = 0; i < n; ++i) {
             unsigned long long v;
             char *k = C[i];
-            assert(HM_del(&S, &k, &v));
-            assert(v == V[i]);
+            assert(HM_del(&S, &k, &v), "key not found");
+            assert(v == V[i], "value does not match");
             printf("\n**** deleting (%s, %llu) ****\n", k, v);
         }
         HM_print(&S, 1);
@@ -227,22 +228,22 @@ int HM_test() {
         for (int i = 0; i < n; ++i) {
             unsigned k = (unsigned) K[i], v = (unsigned) V[i];
             printf("Inserting: %X, %X\n", k, v);
-            assert(!HM_set(&M, &k, &v));
+            assert(!HM_set(&M, &k, &v), "key already exists");
             HM_print(&M, 1);
         }
         for (int i = 0; i < n; ++i) {
             unsigned k = (unsigned) K[i], v = (unsigned) V[i];
             unsigned v_ = 0;
             printf("Getting: %X\n", k);
-            assert(HM_get(&M, &k, &v_));
-            assert(v == v_);
+            assert(HM_get(&M, &k, &v_), "key not found");
+            assert(v == v_, "value does not match");
         }
         for (int i = 0; i < n; ++i) {
             unsigned k = (unsigned) K[i], v = (unsigned) V[i];
             unsigned v_ = 0;
             printf("Deleting: %X\n", k);
-            assert(HM_del(&M, &k, &v_));
-            assert(v == v_);
+            assert(HM_del(&M, &k, &v_), "key not found");
+            assert(v == v_, "value does not match");
         }
         HM_print(&M, 1);
         HM_empty(&M);
@@ -252,16 +253,16 @@ int HM_test() {
         HM_print(&M, 1);
         for (int i = 0; i < n; ++i) {
             printf("Adding: %llu\n", K[i]);
-            assert(!HM_set(&M, K + i, 0));
+            assert(!HM_set(&M, K + i, 0), "key already exists");
             HM_print(&M, 1);
         }
         for (int i = 0; i < n; ++i) {
             printf("Has: %llu\n", K[i]);
-            assert(HM_get(&M, K + i, 0));
+            assert(HM_get(&M, K + i, 0), "key not found");
         }
         for (int i = 0; i < n; ++i) {
             printf("Remove: %llu\n", K[i]);
-            assert(HM_del(&M, K + i, 0));
+            assert(HM_del(&M, K + i, 0), "key not found");
         }
         HM_print(&M, 1);
         HM_empty(&M);

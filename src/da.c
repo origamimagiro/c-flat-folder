@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <assert.h>
+#include "assert.h"
 
 struct DA {
     int s, n, m;
@@ -15,24 +15,24 @@ void DA_push(struct DA *A, void *x) {
 }
 
 void DA_pop(struct DA *A, void *x) {
-    assert(A->n > 0);
+    assert(A->n > 0, "popping from empty array");
     if (4*A->n == A->m) { A->A = realloc(A->A, (A->m /= 2)*A->s); }
     --(A->n);
     if (x != NULL) { memcpy((char*) x, A->A + A->n*A->s, A->s); }
 }
 
 void DA_get(struct DA *A, unsigned i, void *x) {
-    assert((i >= 0) && (i < A->n));
+    assert((i >= 0) && (i < A->n), "index out of bounds");
     memcpy(x, A->A + i*A->s, A->s);
 }
 
 void DA_set(struct DA *A, unsigned i, void *x) {
-    assert((i >= 0) && (i < A->n));
+    assert((i >= 0) && (i < A->n), "index out of bounds");
     memcpy(A->A + i*A->s, x, A->s);
 }
 
 void* DA_getp(struct DA *A, unsigned i) {
-    assert((i >= 0) && (i < A->n));
+    assert((i >= 0) && (i < A->n), "index out of bounds");
     return A->A + i*A->s;
 }
 

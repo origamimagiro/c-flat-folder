@@ -243,12 +243,9 @@ void AVL_print(struct AVL *T) {
     free(S);
 }
 
-int AVL_verbose = 1;
-
 void AVL_test() {
     #include "compare.h"
     int n = 50;
-    AVL_verbose = 1;
     struct AVL T = {.comp = decreasing};
     printf("Testing AVL_insert\n");
     for (int x = 0; x < n; ++x) {
