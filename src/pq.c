@@ -45,19 +45,19 @@ struct PQ {
 };
 
 static
-int min(int a, int b, void *ctx) { return b - a; }
+int minI(int a, int b, void *ctx) { return b - a; }
 
 void PQ_empty(struct PQ *Q) { DA_empty(&(Q->D)); }
 
 void PQ_build(struct PQ *Q, int *A, int n) {
     PQ_empty(Q);
     Q->s = sizeof(int); Q->n = Q->m = n; Q->A = A;
-    if (Q->comp == 0) { Q->comp = min; }
+    if (Q->comp == 0) { Q->comp = minI; }
     build_heap(A, n, Q->comp, Q->ctx);
 }
 
 void PQ_insert(struct PQ *Q, int x) {
-    if (Q->comp == 0) { Q->comp = min; }
+    if (Q->comp == 0) { Q->comp = minI; }
     if (Q->s == 0) { Q->s = sizeof(int); }
     DA_push(&(Q->D), &x);
     heapify_up(Q->n - 1, Q->A, Q->comp, Q->ctx);
@@ -134,7 +134,7 @@ void PQ_test() {
     for (int i = 0; i < (n/2); ++i) { test_extract(&Q); }
     test_empty(&Q);
     printf("change to max PQ\n");
-    Q.comp = max;
+    Q.comp = maxI;
     for (int i = 0; i < n; ++i) { test_insert(&Q, i); }
     for (int i = 0; i < n; ++i) { test_extract(&Q); }
 }

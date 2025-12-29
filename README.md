@@ -5,10 +5,11 @@ C-Flat-Folder (CFF) is port of
 S. Ku](http://jasonku.mit.edu/). It is in progress...
 
 To run, you will need need a C compiler like clang or gcc. This code requires no
-external dependancies aside from the C standard library. The `build` BASH script
-provides an example of usage (run `./build` from a terminal). I currently
-compile everything on every run  as compilation currently takes less than half a
-second on my machine.
+external dependancies aside from the C standard library and POSIX `<dirent.h>`
+for directory traversal (building in Windows may require additional work). The
+`build` BASH script provides an example of usage (run `./build` from a
+terminal). I currently compile everything on every run  as compilation currently
+takes less than half a second on my machine.
 
 **Input:** Put any `.CP` or `.FOLD` files that you want processed in the
 `./examples/` folder, and `CFF` will try to process them.
