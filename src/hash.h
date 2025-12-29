@@ -2,11 +2,11 @@ struct HM {        // 48 bytes
     unsigned k, v;  // number of bytes in key and value resepctively
     int (*eq)(unsigned, const void*, const void*);      // key equality
     unsigned long long (*hash)(unsigned, const void*);  // key to hash
-    unsigned s;     // k + v + sizeof(unsigned)
     unsigned n;     // # stored items
     unsigned m;     // size of table
     unsigned f;     // index of next free
-    char *A;        // data (2*m*s bytes allocated)
+    unsigned *A;    // next data (size 2*m)
+    char *K, *V;    // key, val data (each size 2*m)
 };
 
 int HM_set(struct HM *M, void *kp, void *vp);

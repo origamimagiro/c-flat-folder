@@ -270,7 +270,7 @@ void X_L_eps_2_V_EV_EL(
                 AVL_insert(&T, si);
                 for (int i = 0; i < L->n; ++i) {
                     int li; DA_get(L, i, &li);
-                    DA_push(DA_getp(&SL, si), &li); 
+                    DA_push(DA_getp(&SL, si), &li);
                 }
                 continue;
             }
@@ -533,8 +533,8 @@ double X_L_2_V_EV_EL(
     }
 
     const int N = 50, k = 3;
-    int nV = 0, nE = 0, count = 0, k_ = 0, i_ = 3;
-    int Vn_, En_, (*EV_)[2] = NULL, **EL_ = NULL, *ELn_ = NULL;
+    int nV = 0, nE = 0, count = 0, k_ = 0, i_ = 3, Vn_, En_;
+    int (*EV_)[2] = NULL, **EL_ = NULL, *ELn_ = NULL;
     double (*V_)[2] = NULL;
     for (int i = 0; i < N; ++i) {
         free(V_); free(EV_); free(EL_); free(ELn_);
@@ -552,12 +552,13 @@ double X_L_2_V_EV_EL(
         if (count <= k_) { continue; }
 
         free(*V); free(*EV); free(*EL); free(*ELn);
-        *Vn = Vn_; *V = V_; *En = En_; *EV = EV_; *EL = EL_, *ELn = ELn_; 
-        Vn_ = 0; En_ = 0; V_ = NULL; EV_ = NULL; EL_ = NULL; ELn_ = NULL; 
+        *Vn = Vn_; *V = V_; *En = En_; *EV = EV_; *EL = EL_, *ELn = ELn_;
+        Vn_ = 0; En_ = 0; V_ = NULL; EV_ = NULL; EL_ = NULL; ELn_ = NULL;
         k_ = count; i_ = i + 3;
 
         if (k_ == k) { break; }
     }
+    free(V_); free(EV_); free(EL_); free(ELn_);
     int eps_i = (1 << (i_ - k_));
     double eps = d/eps_i;
     return eps;

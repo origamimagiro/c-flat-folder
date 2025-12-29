@@ -10,11 +10,11 @@ struct HM {        // 48 bytes
     unsigned k, v;  // number of bytes in key and value resepctively
     int (*eq)(unsigned, const void*, const void*);      // key equality
     unsigned long long (*hash)(unsigned, const void*);  // key to hash
-    unsigned s;     // k + v + sizeof(unsigned)
     unsigned n;     // # stored items
     unsigned m;     // size of table
     unsigned f;     // index of next free
-    char *A;        // data (2*m*s bytes allocated)
+    unsigned *A;    // next data (size 2*m)
+    char *K, *V;    // key, val data (each size 2*m)
 };
 
 unsigned long long HM_HASH_INT(unsigned kn, const void *k) {
@@ -35,58 +35,55 @@ int HM_EQ_STR(unsigned kn, const void *a, const void *b) {
 int HM_set(struct HM *M, void *k, void *v);
 static
 void rebuild(struct HM *M, unsigned m) {
-    if (M->m == 0) {
-        assert((M->k > 0) && !(M->k % SI) && !(M->v % SI),
-            "M->k and M->v must be a multiple of sizeof(int)");
-        M->s = SI + M->k + M->v;
-        if (M->eq == 0) {
-            M->eq   = HM_EQ_INT;
-            M->hash = HM_HASH_INT;
-        }
+    if (M->eq == 0) {
+        M->eq   = HM_EQ_INT;
+        M->hash = HM_HASH_INT;
     }
-    char *A = M->A;
-    M->A = calloc(2*m, M->s);
+    unsigned *A = M->A;
+    char *K = M->K, *V = M->V;
+    M->A = calloc(2*m, sizeof(int));
+    M->K = calloc(2*m, M->k);
+    M->V = calloc(2*m, M->v);
     M->f = m; M->n = 0;
     unsigned m_ = M->m; M->m = m;
-    char *c = A;
-    for (int i = 0; i < 2*m_; ++i, c += M->s) {
-        if (!(*((unsigned *) c))) { continue; }
-        HM_set(M, c + SI, c + SI + M->k);
+    char *k = K, *v = V;
+    for (int i = 0; i < 2*m_; ++i) {
+        if (A[i]) { HM_set(M, k, v); }
+        k += M->k;
+        v += M->v;
     }
-    free(A);
+    free(A); free(K); free(V);
 }
 
 static
-int find(struct HM *M, void *k, char **c) {
-    *c = M->A + (M->hash(M->k, k) % M->m)*M->s;
-    unsigned a = *((unsigned *) *c);
+int find(struct HM *M, void *k, unsigned *i) {
+    unsigned a = M->A[*i = (M->hash(M->k, k) % M->m)];
     if (a == 0) { return 0; }
-    while (!M->eq(M->k, k, *c + SI)) {
+    while (!M->eq(M->k, k, M->K + (*i)*M->k)) {
         if (a == 1) { return 0; }
-        a = *((unsigned *) (*c = M->A + a*M->s));
+        a = M->A[*i = a];
     }
     return 1;
 }
 
 int HM_get(struct HM *M, void *k, void *v) {
-    char *c;
-    if ((M->m == 0) || !find(M, k, &c)) { return 0; }
-    memcpy(v, c + SI + M->k, M->v);
+    unsigned i;
+    if ((M->m == 0) || !find(M, k, &i)) { return 0; }
+    memcpy(v, M->V + i*M->v, M->v);
     return 1;
 }
 
 int HM_set(struct HM *M, void *k, void *v) {
     if (M->n == M->m) { rebuild(M, M->m ? 2*M->m : 2); }
-    char *c;
-    if (find(M, k, &c)) { memcpy(c + SI + M->k, v, M->v); return 1; }
-    if (*((unsigned *) c)) {
-        c = M->A + (*((unsigned *) c) = M->f)*M->s;
-        do { M->f = ((M->f + 1 - M->m) % M->m) + M->m; }
-        while (*((unsigned *) (M->A + M->f*M->s)));
+    unsigned i;
+    if (find(M, k, &i)) { memcpy(M->V + i*M->v, v, M->v); return 1; }
+    if (M->A[i]) {
+        i = M->A[i] = M->f;
+        do { M->f = ((M->f + 1 - M->m) % M->m) + M->m; } while (M->A[M->f]);
     }
-    *((unsigned *) c) = 1;
-    memcpy(c + SI, k, M->k);
-    memcpy(c + SI + M->k, v, M->v);
+    M->A[i] = 1;
+    memcpy(M->K + i*M->k, k, M->k);
+    memcpy(M->V + i*M->v, v, M->v);
     ++(M->n);
     return 0;
 }
@@ -94,32 +91,27 @@ int HM_set(struct HM *M, void *k, void *v) {
 int HM_del(struct HM *M, void *k, void *v) {
     if (M->m == 0) { return 0; }
     if ((2*M->n == M->m) && (M->m > 2)) { rebuild(M, M->m/2); }
-    char *c;
-    if (!find(M, k, &c)) { return 0; }
-    memcpy(v, c + SI + M->k, M->v);
-    if (*((unsigned *) c) != 1) {
-        char *c_ = M->A + *((unsigned *) c)*M->s;
-        memcpy(c, c_, M->s);
-        c = c_;
+    unsigned i;
+    if (!find(M, k, &i)) { return 0; }
+    memcpy(v, M->V + i*M->v, M->v);
+    unsigned a = M->A[i];
+    if (a != 1) {
+        memcpy(M->K + i*M->k, M->K + a*M->k, M->k);
+        memcpy(M->V + i*M->v, M->V + a*M->v, M->v);
+        M->A[i] = M->A[a];
+        i = a;
     }
-    memset(c, 0, M->s);
+    memset(M->K + i*M->k, 0, M->k);
+    memset(M->V + i*M->v, 0, M->v);
+    M->A[i] = 0;
     --(M->n);
     return 1;
 }
 
-void HM_empty(struct HM *M) { M->n = M->m = M->f = 0; free(M->A); }
-
-int HM_next(struct HM *M, void *kp, void *vp) {
-    char *k = *((char **) kp);
-    char *a = (k == NULL) ? M->A : (k + M->k + M->v);
-    char *lim = M->A + 2*M->m*M->s;
-    while ((a < lim) && (*((unsigned *) a) == 0)) { a += M->s; }
-    if (a == lim) {
-        *((char **) kp) = *((char **) vp) = NULL;
-        return 0;
-    }
-    *((char **) vp) = (*((char **) kp) = a + SI) + M->k;
-    return 1;
+void HM_empty(struct HM *M) {
+    M->n = M->m = M->f = 0;
+    free(M->A); free(M->K); free(M->V);
+    M->A = NULL; M->K = NULL; M->V = NULL;
 }
 
 /////////////////////////////////////////////////
@@ -131,8 +123,7 @@ void HM_print(struct HM *M, int verbose) {
     for (unsigned i = 0; i < 2*M->m; ++i) {
         if (i == M->m) { printf("-----\n"); }
         printf("   %u: {k: ", i);
-        char *c = M->A + i*M->s;
-        char *Mk = c + SI;
+        char *Mk = M->K + i*M->k;
         if (M->eq == HM_EQ_STR) {
             printf("%s", *((char **) Mk));
         } else if ((M->eq == HM_EQ_INT) && (M->k == SL)) {
@@ -143,7 +134,7 @@ void HM_print(struct HM *M, int verbose) {
             }
         }
         printf(", v: ");
-        char *Mv = c + SI + M->k;
+        char *Mv = M->V + i*M->v;
         if (M->v == SL) {
             printf("%llu", *((unsigned long long *) Mv));
         } else {
@@ -151,7 +142,7 @@ void HM_print(struct HM *M, int verbose) {
                 printf("%.2X", Mv[j] & 0xFF);
             }
         }
-        printf(", next: %u}\n", *((unsigned *) c));
+        printf(", next: %u}\n", M->A[i]);
     }
 }
 
@@ -183,10 +174,6 @@ int HM_test() {
             assert(HM_get(&M, K + i, &v), "key not found");
             printf("Found: %llu\n", v);
             assert(v == V[i], "value does not match");
-        }
-        unsigned long long *k = 0, *v = 0, i = 0;
-        while (HM_next(&M, &k, &v)) {
-            printf("%llu: [%llu, %llu]\n", i++, *k, *v);
         }
         for (int i = 0; i < n; ++i) {
             unsigned long long v;
