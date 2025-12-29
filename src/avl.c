@@ -19,26 +19,32 @@ struct AVL {
 
 /////////////////////////////////////////////////////
 
-static struct Node* node(struct AVL *T, unsigned i) { return DA_getp(&(T->A), i); }
+static
+struct Node* node(struct AVL *T, unsigned i) { return DA_getp(&(T->A), i); }
 
-static unsigned idx(struct AVL *T, struct Node *X) {
+static
+unsigned idx(struct AVL *T, struct Node *X) {
     return ((int) ((char *) X - T->A.A))/sizeof(struct Node);
 }
 
-static char ht(struct AVL *T, int r, struct Node *X) {
+static
+char ht(struct AVL *T, int r, struct Node *X) {
     return (X->c[r] == 0) ? 0 : node(T, X->c[r])->h;
 }
 
-static int skew(struct AVL *T, struct Node *X) {
+static
+int skew(struct AVL *T, struct Node *X) {
     return ht(T, 1, X) - ht(T, 0, X);
 }
 
-static void update(struct AVL *T, struct Node *X) {
+static
+void update(struct AVL *T, struct Node *X) {
     char hL = ht(T, 0, X), hR = ht(T, 1, X);
     X->h = 1 + ((hL < hR) ? hR : hL);
 }
 
-static struct Node* find(struct AVL *T, int x) {
+static
+struct Node* find(struct AVL *T, int x) {
     struct Node *X = node(T, 0);
     while (1) {
         int c = T->comp(x, X->x, T->ctx);
@@ -50,7 +56,8 @@ static struct Node* find(struct AVL *T, int x) {
     return X;
 }
 
-static void rotate(struct AVL *T, int r, struct Node *D) {
+static
+void rotate(struct AVL *T, int r, struct Node *D) {
     unsigned d = idx(T, D), b = D->c[!r], e = D->c[r], Dx = D->x;
     struct Node *B = node(T, b);
     unsigned a = B->c[!r], c = B->c[r], Bx = B->x;
@@ -62,7 +69,8 @@ static void rotate(struct AVL *T, int r, struct Node *D) {
     update(T, D);
 }
 
-static void maintain(struct AVL *T, struct Node *X) {
+static
+void maintain(struct AVL *T, struct Node *X) {
     while (1) {
         update(T, X);
         int s = skew(T, X);
@@ -77,12 +85,14 @@ static void maintain(struct AVL *T, struct Node *X) {
     }
 }
 
-static struct Node* end(struct AVL *T, int r, struct Node *X) {
+static
+struct Node* end(struct AVL *T, int r, struct Node *X) {
     while (X->c[r] != 0) { X = node(T, X->c[r]); }
     return X;
 }
 
-static struct Node* adj(struct AVL *T, int r, struct Node *X) {
+static
+struct Node* adj(struct AVL *T, int r, struct Node *X) {
     if (T->A.n == 0) { return NULL; }
     if ((X == NULL) || (X->c[r] != 0)) {
         return end(T, !r, node(T, (X == NULL) ? 0 : X->c[r]));
@@ -95,7 +105,8 @@ static struct Node* adj(struct AVL *T, int r, struct Node *X) {
     return has ? node(T, Y->p) : NULL;
 }
 
-static void remove_key(struct AVL *T, struct Node *X) {
+static
+void remove_key(struct AVL *T, struct Node *X) {
     int r = (X->c[0] == 0);
     unsigned c = X->c[r];
     while (c != 0) {
@@ -124,7 +135,8 @@ static void remove_key(struct AVL *T, struct Node *X) {
     maintain(T, node(T, c));
 }
 
-static struct Node* neighbor(struct AVL *T, int r, int x) {
+static
+struct Node* neighbor(struct AVL *T, int r, int x) {
     if (T->A.n == 0) { return NULL; }
     struct Node *X = find(T, x);
     int c = T->comp(x, X->x, T->ctx);
@@ -189,11 +201,13 @@ void AVL_print_struct(struct AVL *T) {
     }
 }
 
-static int node_sprint(struct Node *X, char *buff) {
+static
+int node_sprint(struct Node *X, char *buff) {
     return snprintf(buff, buff ? 16 : 0, "%i", X->x);
 }
 
-static int str_width(struct AVL *T, int i) {
+static
+int str_width(struct AVL *T, int i) {
     struct Node *X = node(T, i);
     int out = node_sprint(X, NULL);
     out += X->l ? str_width(T, X->l) : 0;

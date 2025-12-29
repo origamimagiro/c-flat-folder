@@ -31,7 +31,8 @@ int HM_EQ_STR(unsigned kn, const void *a, const void *b) {
 
 const unsigned SU = sizeof(unsigned);
 int HM_set(struct HM *M, void *k, void *v);
-static void rebuild(struct HM *M, unsigned m) {
+static
+void rebuild(struct HM *M, unsigned m) {
     if (M->m == 0) {
         assert((M->k > 0) && !(M->k % SU) && !(M->v % SU));
         M->s = SU + M->k + M->v;
@@ -52,7 +53,8 @@ static void rebuild(struct HM *M, unsigned m) {
     free(A);
 }
 
-static int find(struct HM *M, void *k, char **c) {
+static
+int find(struct HM *M, void *k, char **c) {
     *c = M->A + (M->hash(M->k, k) % M->m)*M->s;
     unsigned a = *((unsigned *) *c);
     if (a == 0) { return 0; }
