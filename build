@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+clang -std=c99 \
+-Wall -O3 \
+src/*.c \
+-o FF \
+&& \
+./FF examples/ \
+-v out/data.csv \
+-svg out/ \
