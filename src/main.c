@@ -4,9 +4,9 @@
 #include <dirent.h>
 #include <time.h>
 
+#include "assert.h"
 #include "io.h"
 #include "svg.h"
-#include "utility.h"
 #include "convert.h"
 
 struct FoldData {

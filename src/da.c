@@ -62,6 +62,7 @@ void DA_print(struct DA *A, void (*print_item)(void *)) {
     printf("]\n");
 }
 
+static
 void print_x(void *x) {
     printf("%i", *((int*) x));
 }

@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "assert.h"
 #include "da.h"
-#include "utility.h"
 
 static
 int seek_past(FILE *f, char *s) {

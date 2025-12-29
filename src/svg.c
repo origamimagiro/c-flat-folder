@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "assert.h"
 #include "point.h"
-#include "utility.h"
 
 void SVG_add_svg_open(
     FILE *file,

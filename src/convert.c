@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "assert.h"
 #include "svg.h"
 #include "da.h"
 #include "pq.h"
 #include "compare.h"
 #include "avl.h"
 #include "point.h"
-#include "utility.h"
 #include "hash.h"
 
 #include "svg.h"

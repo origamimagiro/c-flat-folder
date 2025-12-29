@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "utility.h"
+#include "assert.h"
 #include "da.h"
 
 static
@@ -51,7 +51,7 @@ void PQ_empty(struct PQ *Q) { DA_empty(&(Q->D)); }
 
 void PQ_build(struct PQ *Q, int *A, int n) {
     PQ_empty(Q);
-    Q->s = sizeof(int); Q->n = Q->m = n; Q->A = A; 
+    Q->s = sizeof(int); Q->n = Q->m = n; Q->A = A;
     if (Q->comp == 0) { Q->comp = min; }
     build_heap(A, n, Q->comp, Q->ctx);
 }
@@ -80,7 +80,7 @@ int PQ_extract(struct PQ *Q) {
 #include <stdio.h>
 
 void PQ_print(struct PQ *Q) {
-    printf("["); 
+    printf("[");
     for (int i = 0; i < Q->n; ++i) {
         if (i > 0) { printf(","); }
         printf("%i", Q->A[i]);
@@ -118,14 +118,17 @@ void test_empty(struct PQ *Q) {
 
 void PQ_test() {
     #include "compare.h"
-    #include "utility.h"
     int n = 20;
     int *A = malloc(n*sizeof(int));
     for (int i = 0; i < n; ++i) { A[i] = i; }
-    print_A(A, n, "%i");
+    for (int i = 0; i < n; ++i) {
+        printf("%s%i", (i > 0) ? "," : "[", A[i]);
+    } printf("]\n");
     printf("sort decreasing\n");
     sort(A, n, decreasing, 0);
-    print_A(A, n, "%i");
+    for (int i = 0; i < n; ++i) {
+        printf("%s%i", (i > 0) ? "," : "[", A[i]);
+    } printf("]\n");
     struct PQ Q = test_init();
     for (int i = n - 1; i >= 0; --i) { test_insert(&Q, i); }
     for (int i = 0; i < (n/2); ++i) { test_extract(&Q); }
