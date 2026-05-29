@@ -61,7 +61,7 @@ void SVG_add_text(
     char *color, char *text
 ) {
     fprintf(file, "<text x=\"%.2lf\" y=\"%.2lf\" "
-                  "fill=\"%s\">%s</text>\n", x, y, color, text);
+                  "fill=\"%s\" font-size=\"xx-small\">%s</text>\n", x, y, color, text);
 }
 
 void SVG_V_EV_EA_FV_2_path(

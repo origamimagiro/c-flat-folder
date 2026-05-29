@@ -11,4 +11,6 @@ int  PQ_best(struct PQ *Q);
 void PQ_insert(struct PQ *Q, int x);
 int  PQ_extract(struct PQ *Q);
 void PQ_empty(struct PQ *Q);
+
+void PQ_print(struct PQ *Q);
 void PQ_test();

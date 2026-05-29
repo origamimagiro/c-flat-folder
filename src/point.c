@@ -98,7 +98,7 @@ int P_line_intersect(
     struct Point d12 = P_sub(p1, p2);
     struct Point d34 = P_sub(p3, p4);
     double denom = P_cross(d12, d34);
-    if (denom < eps*eps) { return 0; }
+    if (fabs(denom) < eps*eps) { return 0; }
     double c12 = P_cross(p1, p2);
     double c34 = P_cross(p3, p4);
     *out = P_div(P_sub(P_mul(d34, c12), P_mul(d12, c34)), denom);

@@ -12,6 +12,7 @@
 struct FoldData {
     char *title;
     double eps, feps;
+    int eps_i, feps_i;
     int Vn, En, Fn, Pn, Sn, Cn;
     double time;
 };
@@ -31,8 +32,8 @@ void process_file(
 ) {
     printf("Processing: %s\n", path);
 
-    int Vn = 0, En = 0, Fn = 0;
-    double eps = 1;
+    int Vn = 0, En = 0, Fn = 0, eps_i = 0;
+    double eps = 0;
 
     double (*V)[2] = NULL;
     int (*EV)[2] = NULL, **FV = NULL, *FVn = NULL;
@@ -46,7 +47,7 @@ void process_file(
         assert(Ln > 0, "Unable to parse CP file");
 
         int **EL = NULL, *ELn = NULL;
-        eps = X_L_2_V_EV_EL(Ln, L, &Vn, &V, &En, &EV, &EL, &ELn);
+        eps = X_L_2_V_EV_EL(Ln, L, &Vn, &V, &En, &EV, &EL, &ELn, &eps_i);
 
         int **VV = NULL, *VVn = NULL;
         X_V_EV_2_VV_FV(Vn, V, En, EV, &VV, &VVn, &Fn, &FV, &FVn);
@@ -63,7 +64,7 @@ void process_file(
         int Vn_ = 0, En_ = 0, (*EV_)[2] = NULL, **EL = NULL, *ELn = NULL;
         double (*V_)[2] = NULL, (*L)[2][2] = malloc(En*2*2*sizeof(double));
         X_V_EV_2_L(V, En, EV, L);
-        eps = X_L_2_V_EV_EL(En, L, &Vn_, &V_, &En_, &EV_, &EL, &ELn);
+        eps = X_L_2_V_EV_EL(En, L, &Vn_, &V_, &En_, &EV_, &EL, &ELn, &eps_i);
 
         int has_extra_vertices = (Vn != Vn_);
         if (has_extra_vertices) {
@@ -84,7 +85,7 @@ void process_file(
             X_V_EV_2_VV_FV(Vn, V, En, EV, &VV, &VVn, &Fn, &FV, &FVn);
             free(VV); free(VVn);
         }
-
+        
         free(L); free(V_); free(EV_); free(EL); free(ELn);
 
     } else {
@@ -100,20 +101,47 @@ void process_file(
         IO_FOLD_export(filename, file, Vn, V, En, EV, EA, Fn, FV, FVn);
     }
 
-    int Pn = 0, Sn = 0, Cn = 0;
-    double cell_eps;
+    if (svg_out != NULL) {
+        char filename[256] = {0};
+        sprintf(filename, "./%s%s", svg_out, file);
 
-    int *Ff = NULL, (*SP)[2] = NULL, **CP = NULL, *CPn = NULL;
-    double (*Vf)[2] = NULL, (*P)[2] = NULL;
+        int off = 1 + strlen(svg_out) + strlen(file) - strlen(ext);
+
+        sprintf(filename + off, ".svg");
+        printf(" - Writing SVG: %s\n", filename);
+        SVG_V_EV_EA_FV_2_path(Vn, V, En, EV, EA, Fn, FV, FVn, eps, filename);
+    }
+
+    int Pn = 0, Sn = 0, Cn = 0, feps_i;
+    double feps;
+
+    int *Ff = NULL;
+    double (*Vf)[2] = NULL;
+
+    X_V_EV_EA_FV_2_Vf_Ff(Vn, V, En, EV, EA, Fn, FV, FVn, &Vf, &Ff);
+
+    if (svg_out != NULL) {
+        char filename[256] = {0};
+        sprintf(filename, "./%s%s", svg_out, file);
+
+        int off = 1 + strlen(svg_out) + strlen(file) - strlen(ext);
+
+        sprintf(filename + off, "_folded.svg");
+        printf(" - Writing SVG: %s\n", filename);
+        SVG_V_EV_EA_FV_2_path(Vn, Vf, En, EV, EA, Fn, FV, FVn, eps, filename);
+    }
+
+    int (*SP)[2] = NULL, **CP = NULL, *CPn = NULL;
+    double (*P)[2] = NULL;
 
     {
-        X_V_EV_EA_FV_2_Vf_Ff(Vn, V, En, EV, EA, Fn, FV, FVn, &Vf, &Ff);
-
         double (*L)[2][2] = malloc(En*2*2*sizeof(double));
         X_V_EV_2_L(Vf, En, EV, L);
 
         int **SE = NULL, *SEn = NULL;
-        cell_eps = X_L_2_V_EV_EL(En, L, &Pn, &P, &Sn, &SP, &SE, &SEn);
+        feps = X_L_2_V_EV_EL(En, L, &Pn, &P, &Sn, &SP, &SE, &SEn, &feps_i);
+        assert(Pn > 0, "No stable graph found");
+
         free(SE); free(SEn); free(L);
 
         int **PP = NULL, *PPn = NULL;
@@ -127,24 +155,17 @@ void process_file(
 
         int off = 1 + strlen(svg_out) + strlen(file) - strlen(ext);
 
-        sprintf(filename + off, ".svg");
-        printf(" - Writing SVG: %s\n", filename);
-        SVG_V_EV_EA_FV_2_path(Vn, V, En, EV, EA, Fn, FV, FVn, eps, filename);
-
-        sprintf(filename + off, "_folded.svg");
-        printf(" - Writing SVG: %s\n", filename);
-        SVG_V_EV_EA_FV_2_path(Vn, Vf, En, EV, EA, Fn, FV, FVn, eps, filename);
-
         sprintf(filename + off, "_overlap.svg");
         printf(" - Writing SVG: %s\n", filename);
-        SVG_V_EV_EA_FV_2_path(Pn, P, Sn, SP, NULL, Cn, CP, CPn, cell_eps, filename);
+        SVG_V_EV_EA_FV_2_path(Pn, P, Sn, SP, NULL, Cn, CP, CPn, feps, filename);
     }
 
     free(V); free(EV); free(EA); free(FV); free(FVn);
     free(Vf); free(Ff); free(P); free(SP); free(CP); free(CPn);
 
     *data = (struct FoldData) {
-        .title = file, .eps = eps, .feps = cell_eps,
+        .title = file,
+        .eps = eps, .feps = feps, .eps_i = eps_i, .feps_i = feps_i,
         .Vn = Vn, .En = En, .Fn = Fn, .Pn = Pn, .Sn = Sn, .Cn = Cn
     };
 }
@@ -164,16 +185,16 @@ void get_ext(char *path, char *ext) {
 
 void add_data(FILE *file, struct FoldData *data) {
     if (file == NULL) { return; }
-    fprintf(file, "%s,%i,%i,%i,%.17lf,%i,%i,%i,%.17lf",
-        data->title, data->Vn, data->En, data->Fn, data->eps,
-        data->Pn, data->Sn, data->Cn, data->feps
+    fprintf(file, "%s,%i,%i,%i,%i,%.17lf,%i,%i,%i,%i,%.17lf",
+        data->title, data->Vn, data->En, data->Fn, data->eps_i, data->eps,
+        data->Pn, data->Sn, data->Cn, data->feps_i, data->feps
     );
     fprintf(file, "\n");
-    printf("    - Found cp epsilon: %.17g\n", data->eps);
+    printf("    - Found cp epsilon: %i | %.17g\n", data->eps_i, data->eps);
     printf("    - Found %i Vertices\n", data->Vn);
     printf("    - Found %i Edges\n",    data->En);
     printf("    - Found %i Faces\n",    data->Fn);
-    printf("    - Found cell eps: %.17g\n", data->feps);
+    printf("    - Found cell eps: %i | %.17g\n", data->eps_i, data->feps);
     printf("    - Found %i Points\n",   data->Pn);
     printf("    - Found %i Segments\n", data->Sn);
     printf("    - Found %i Cells\n",    data->Cn);
@@ -201,9 +222,9 @@ int main(int argc, char **argv) {
     get_ext(path, ext);
 
     struct FoldData data = {};
-    if (v_out != NULL) {
-        fprintf(v_out, "title,vertices,edges,faces,eps,points,segments,cells,feps\n");
-    }
+    if (v_out != NULL) { fprintf(v_out,
+        "title,vertices,edges,faces,eps_i,eps,points,segments,cells,feps_i,feps\n"
+    ); }
 
     clock_t t1 = clock();
     if (ext[0] == 0) {

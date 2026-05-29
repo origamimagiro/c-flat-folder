@@ -63,10 +63,10 @@ int AVL_segment_comp(int i, int j, void *ctx) {
     struct Segment *sj = DA_getp(C->S, j);
     struct Point *p = DA_getp(C->P, C->curr);
 
-    double d = point_seg_dist(p, sj);
-    int out = (-d > 0) ? 1 : -1;
+    double dj = point_seg_dist(p, sj);
+    int out = (-dj > 0) ? 1 : -1;
 
-    if (fabs(d) < C->eps) {     // curr on segment j
+    if (fabs(dj) < C->eps) {    // curr on segment j
         if (si->P[1] != -1) {   // si is a newly inserted segment
             struct Point *q = DA_getp(C->P, si->P[1]);
             if (on_line(q, sj, C->eps)) { return 0; }   // segment exists
@@ -84,8 +84,7 @@ int line_comp(int i, int j, void *ctx) {
     struct Point pj; DA_get(C->P, (C->L)[j].P[1], &pj);
     double dj = P_distsq(p, pj);
     double di = P_distsq(p, pi);
-
-    return dj - di;
+    return (di == dj) ? (i - j) : ((dj < di) ? -1 : 1);
 }
 
 void X_V_EV_2_L(double (*V)[2], int En, int (*EV)[2], double (*L)[2][2]) {
@@ -104,7 +103,7 @@ void X_LA_EL_2_EA(char *LA, int En, int **EL, int *ELn, char *EA) {
     }
 }
 
-void sweep_svg(int f, int Pn, struct DA *P, struct DA *V2P,
+void sweep_svg(int f, int pi, int Pn, struct DA *P, struct DA *V2P,
     struct AVL *Q, struct DA *S);
 
 void X_L_eps_2_V_EV_EL(
@@ -118,9 +117,9 @@ void X_L_eps_2_V_EV_EL(
     struct Segment *LL = malloc(Ln*sizeof(struct Segment));
 
     struct DA P = {sizeof(struct Point)};   // struct Point[]
-    struct DA PL  = {sizeof(struct DA)};    // int[][]
+    struct DA PL  = {sizeof(struct DA)};    // int[][] (lines starting at point)
     struct DA S = {sizeof(struct Segment)}; // struct Segment[]
-    struct DA SL  = {sizeof(struct DA)};    // int[][]
+    struct DA SL  = {sizeof(struct DA)};    // int[][] (lines on segment)
 
     struct Sweep_Context X = {.L = LL, .P = &P, .S = &S, .eps = eps};
     struct AVL Q = {.comp = AVL_point_comp, .ctx = &X};
@@ -137,7 +136,7 @@ void X_L_eps_2_V_EV_EL(
 
         for (int i = 0; i < 2; ++i) {
             l->P[i] = P.n;
-            DA_push(&P, &(p[i]));             // add point
+            DA_push(&P, &(p[i]));      // add point
             int pi = AVL_insert(&Q, l->P[i]);
             if (pi != l->P[i]) {       // point exists
                 l->P[i] = pi;
@@ -177,6 +176,7 @@ void X_L_eps_2_V_EV_EL(
         double w = x_max - x_min;
         SCALE = (h > w) ? h : w;
     }
+    // match till here 
 
     {   // initialize sentinal segment
         struct Segment s0 = {};
@@ -199,12 +199,16 @@ void X_L_eps_2_V_EV_EL(
     // FILE *out = fopen(filepath, "w");
 
     while (AVL_size(&Q) > 0) {    // line sweep
-        // AVL_print(&Q);
-        // sweep_svg(cc++, Pn, &P, &V2P, &Q, &S);
-
         int *ppi = AVL_first(&Q);
         int pi = *ppi;
+        // sweep_svg(cc++, pi, Pn, &P, &V2P, &Q, &S);
+
         AVL_remove(&Q, ppi);
+        // printf("%i, \n", pi);
+        // printf("%i, %i, %i\n", pi, AVL_size(&Q), S.n);
+        // for (int *vi = AVL_first(&Q); vi != NULL; vi = AVL_next(&Q, vi)) {
+        //     printf("%i, ", *vi);
+        // } printf("\n");
         X.curr = pi;
         struct Point p; DA_get(&P, pi, &p);
         struct DA *L = DA_getp(&PL, pi);
@@ -277,6 +281,8 @@ void X_L_eps_2_V_EV_EL(
         }
 
         DA_push(&V2P, &pi); // point used as vertex
+        struct Point pp; DA_get(&P, pi, &pp);
+        // printf("%i <= %i: (%lf, %lf) %lf\n", V2P.n - 1, pi, pp.x, pp.y, eps);
 
         for (int i = 0; i < S1.n; ++i) {    // close entering segments
             int si; DA_get(&S1, i, &si);
@@ -293,6 +299,11 @@ void X_L_eps_2_V_EV_EL(
         }
 
         sort((int*) L->A, L->n, line_comp, &X);
+
+        // XX for (int i = 0; i < L->n; ++i) {
+        // XX     int li; DA_get(L, i, &li);
+        // XX     printf("%i,", li);
+        // XX } printf("\n");
 
         for (int i = 0; i < L->n; ++i) {    // add lines to new segments
             int li; DA_get(L, i, &li);
@@ -328,12 +339,14 @@ void X_L_eps_2_V_EV_EL(
             struct Point pr; DA_get(&P, sr->P[0], &pr);
             struct Point x = {};
 
-            int c;
             if (!P_line_intersect(  // no intersection
                     pl, P_add(pl, P_mul(sl->U, SCALE)),
                     pr, P_add(pr, P_mul(sr->U, SCALE)), eps, &x)
-                || ((c = P_point_comp(x, p, eps)) == 0) // x is p
-                || ((c < 0) && (x.y <= p.y))            // x is behind p
+            ) { continue; }
+            int c = P_point_comp(x, p, eps);
+            // XX printf("%i, %i - %i\n", *l, *r, c);
+            if ((c == 0) ||                 // x is p
+                ((c < 0) && ((x.y - p.y) < eps))   // x is behind p
             ) { continue; }
 
             int xi = P.n;
@@ -352,6 +365,8 @@ void X_L_eps_2_V_EV_EL(
     // sweep_svg(cc, Pn, &P, &V2P, &Q, &S);
     // printf("%i, %i\n", AVL_size(&Q), AVL_size(&T));
     // fclose(out);
+
+    // printf("%i, %i, %i\n", P.n, S.n, AVL_size(&T));
 
     {   // check termination
         if (AVL_size(&T) != 0) {
@@ -403,11 +418,7 @@ void X_L_eps_2_V_EV_EL(
     }
 
     *Vn = V2P.n;
-    *En = S.n - 1;
-
     *V   = malloc(2*(*Vn)*sizeof(double));
-    *EV  = malloc(2*(*En)*sizeof(int));
-    *ELn = malloc((*En)*sizeof(int));
 
     {   // assign vertex data
         for (int i = 0, ii; i < *Vn; ++i) {
@@ -424,26 +435,44 @@ void X_L_eps_2_V_EV_EL(
         sort(SI, S.n, seg_comp, S.A);
 
         int sum = 0;
-        for (int i = 0; i < *En; ++i) {
-            int si = SI[i + 1];
+        struct DA EV_ = {2*sizeof(int)};
+        struct DA EL_ = {sizeof(struct DA)};
+        int a = -1, b = -1;
+        for (int i = 1; i < S.n; ++i) {
+            int si = SI[i];
             struct Segment *s = DA_getp(&S, si);
-            sum += ((*ELn)[i] = ((struct DA*) DA_getp(&SL, si))->n);
-            (*EV)[i][0] = s->P[0];
-            (*EV)[i][1] = s->P[1];
+            struct DA* sL_;
+            if ((s->P[0] != a) || (s->P[1] != b)) {
+                DA_push(&EV_, s->P);
+                DA_push(&EL_, &((struct DA) {sizeof(int)}));
+                sL_ = DA_getp(&EL_, EL_.n - 1);
+                a = s->P[0]; b = s->P[1];
+            } else {
+                sL_ = DA_getp(&EL_, EL_.n - 1);
+            }
+            struct DA* sL = DA_getp(&SL, si);
+            sum += sL->n;
+            for (int j = 0; j < sL->n; ++j) {
+                DA_push(sL_, DA_getp(sL, j));
+            }
         }
 
+        *En = EV_.n;
+        *EV = DA_freeze(&EV_);
+        *ELn = malloc((*En)*sizeof(int));
         *EL = malloc((*En)*sizeof(int*) + sum*sizeof(int));
         int *ELD = (int *) (*EL + *En);
 
         for (int i = 0; i < *En; ++i) {
-            int Ln = (*ELn)[i];
-            int *L = (int*) ((struct DA*) DA_getp(&SL, SI[i + 1]))->A;
+            struct DA* eL = DA_getp(&EL_, i);
+            int Ln = (*ELn)[i] = eL->n;
+            int *L = (int*) eL->A;
             int *L_ = (*EL)[i] = ELD;
             ELD += Ln;
-            for (int j = 0; j < Ln; ++j) {
-                L_[j] = L[j];
-            }
+            for (int j = 0; j < Ln; ++j) { L_[j] = L[j]; }
+            DA_empty(eL);
         }
+        DA_empty(&EL_);
         free(SI);
     }
 
@@ -464,7 +493,7 @@ void X_L_eps_2_V_EV_EL(
     DA_empty(&SL);
 }
 
-void sweep_svg(int f, int Pn, struct DA *P, struct DA *V2P,
+void sweep_svg(int f, int pi, int Pn, struct DA *P, struct DA *V2P,
     struct AVL *Q, struct DA *S
 ) {
     double t = 1000;
@@ -478,6 +507,9 @@ void sweep_svg(int f, int Pn, struct DA *P, struct DA *V2P,
     sprintf(buff, "./out/output_%i.svg", f);
     FILE *file = fopen(buff, "w");
     SVG_add_svg_open(file, -t/2, -t/2, t, t, -(b + t)/2, -(b + t)/2, b + t, b + t);
+    sprintf(buff, "%i", pi);
+    struct Point ul = P_scale(min, t, ts, min, diag);
+    SVG_add_text(file, ul.x, ul.y, "#000", buff);
     for (int i = 1; i < S->n; ++i) {
         sprintf(buff, "%i", i);
         struct Segment *s = DA_getp(S, i);
@@ -485,7 +517,7 @@ void sweep_svg(int f, int Pn, struct DA *P, struct DA *V2P,
         p = P_scale(p, t, ts, min, diag);
         struct Point q = P_add(p, P_mul(s->U, t/30));
         struct Point tc = q;
-        char *c = "#F00";
+        char *c = "#0F0";
         if (s->P[1] != -1) {
             c = "#00F";
             DA_get(P, s->P[1], &q);
@@ -519,7 +551,7 @@ void sweep_svg(int f, int Pn, struct DA *P, struct DA *V2P,
 double X_L_2_V_EV_EL(
     const int Ln, const double (*L)[2][2],
     int *Vn, double (**V)[2],
-    int *En, int (**EV)[2], int ***EL, int **ELn
+    int *En, int (**EV)[2], int ***EL, int **ELn, int *eps_i
 ) {
     assert((*V == NULL) && (*EV == NULL) &&
         (*EL == NULL) && (*ELn == NULL), "Outputs should start NULL");
@@ -532,17 +564,19 @@ double X_L_2_V_EV_EL(
         if (d_ < d) { d = d_; }
     }
 
-    const int N = 50, k = 3;
+    const int N = 25, k = 3;
     int nV = 0, nE = 0, count = 0, k_ = 0, i_ = 3, Vn_, En_;
     int (*EV_)[2] = NULL, **EL_ = NULL, *ELn_ = NULL;
     double (*V_)[2] = NULL;
-    for (int i = 0; i < N; ++i) {
+    for (int i = 3; i < (N + 3); ++i) {
         free(V_); free(EV_); free(EL_); free(ELn_);
         V_ = NULL; EV_ = NULL; EL_ = NULL; ELn_ = NULL;
 
-        double eps = d/(1 << (i + 3));
+        double eps = d/(1 << i);
+        if (eps < 0) { continue; }
 
         X_L_eps_2_V_EV_EL(Ln, L, eps, &Vn_, &V_, &En_, &EV_, &EL_, &ELn_);
+        // printf("%lf, %i, %i\n", eps, Vn_, En_);
 
         if (Vn_ == 0) { nV = nE = count = 0; continue; }
 
@@ -551,16 +585,14 @@ double X_L_2_V_EV_EL(
 
         if (count <= k_) { continue; }
 
-        free(*V); free(*EV); free(*EL); free(*ELn);
-        *Vn = Vn_; *V = V_; *En = En_; *EV = EV_; *EL = EL_, *ELn = ELn_;
-        Vn_ = 0; En_ = 0; V_ = NULL; EV_ = NULL; EL_ = NULL; ELn_ = NULL;
-        k_ = count; i_ = i + 3;
+        k_ = count; i_ = i;
 
         if (k_ == k) { break; }
     }
     free(V_); free(EV_); free(EL_); free(ELn_);
-    int eps_i = (1 << (i_ - k_));
-    double eps = d/eps_i;
+    *eps_i = i_ - k_ + 1;
+    double eps = d/(1 << *eps_i);
+    X_L_eps_2_V_EV_EL(Ln, L, eps, Vn, V, En, EV, EL, ELn);
     return eps;
 }
 
@@ -627,6 +659,11 @@ void X_V_EV_2_VV_FV(
     {
         struct DA F = {sizeof(struct DA)};
         struct HM seen = {sizeof(long long), 0};
+        // if (Vn > 287) {
+        //     for (int i = 0; i < (*VVn)[287]; ++i) {
+        //         printf("%i,", (*VV)[287][i]);
+        //     } printf("\n");
+        // }
 
         for (unsigned vi = 0; vi < Vn; ++vi) {
 
@@ -643,8 +680,9 @@ void X_V_EV_2_VV_FV(
                 DA_push(&fV, &vi);
                 unsigned a = vi, b = vj;
 
+                // printf("%i\n", vi);
                 while (b != vi) {
-
+                    // printf("%i, %i\n", b, vi);
 
                     DA_push(&fV, &b);
 
@@ -704,13 +742,19 @@ void X_V_EV_2_VV_FV(
 }
 
 struct Edata {
-    int u, v, f, a, p;
-    double d;
+    int u, v;   // indicies of endpoints
+    int f;      // index of entering face
+    int a;      // bool is folded
+    int p;      // bool face f is flipped
+    int h;      // depth of path
+    double d;   // length of edge
 };
 
 static
 int E_comp(int i, int j, void *ctx) {
     struct Edata *E = ctx;
+    // int dh = E[j].h - E[i].h;
+    // int out = (dh == 0) ? ((E[i].d < E[j].d) ? -1 : 1) : dh;
     return (E[i].d < E[j].d) ? -1 : 1;
 }
 
@@ -737,9 +781,10 @@ void X_V_EV_EA_FV_2_Vf_Ff(
             e->a = (EA[ei] != 'F');
             e->p = 0;
             e->f = -1;
+            e->h = ei;
             struct Point pu = P[e->u];
             struct Point pv = P[e->v];
-            e->d = P_dist(pu, pv);
+            e->d = P_distsq(pu, pv);
             unsigned long long k = encode(e->u, e->v);
             HM_set(&E_map, &k, &en);
         }
@@ -809,8 +854,8 @@ void X_V_EV_EA_FV_2_Vf_Ff(
             HM_get(&E_map, &k, &ej);
             struct Edata *e_ = &(E[ej]);
             if ((e_->f != -1) && ((*Ff)[e_->f] == -1)) {
-                PQ_insert(&Q, ej);
                 e_->p = (e_->a) ? !(e->p) : e->p;
+                PQ_insert(&Q, ej);
             }
             u = v;
         }

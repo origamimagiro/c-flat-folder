@@ -5,7 +5,7 @@ void X_LA_EL_2_EA(char *LA, int En, int **EL, int *ELn, char *EA);
 double X_L_2_V_EV_EL(
     const int Ln, const double (*L)[2][2],
     int *Vn, double (**V)[2],
-    int *En, int (**EV)[2], int ***EL, int **ELn
+    int *En, int (**EV)[2], int ***EL, int **ELn, int *eps_i
 );
 
 void X_L_eps_2_V_EV_EL(
